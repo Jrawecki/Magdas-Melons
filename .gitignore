@@ -33,3 +33,7 @@ dist-ssr
 
 # Wrangler local state/temp files
 .wrangler/
+
+# Local agent/tooling metadata
+.agents/
+.augment/
