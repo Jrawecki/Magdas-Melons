@@ -1,0 +1,129 @@
+interface Env {
+  TURNSTILE_SECRET_KEY?: string
+  FORMSUBMIT_EMAIL?: string
+}
+
+interface TurnstileResult {
+  success: boolean
+  'error-codes'?: string[]
+}
+
+const DEFAULT_FORMSUBMIT_EMAIL = 'magdalenaklotzbach@gmail.com'
+const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+
+const json = (payload: unknown, status = 200): Response =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+    },
+  })
+
+const verifyTurnstile = async (
+  secret: string,
+  token: string,
+  remoteIp: string | null,
+): Promise<TurnstileResult> => {
+  const body = new URLSearchParams({
+    secret,
+    response: token,
+  })
+
+  if (remoteIp) {
+    body.set('remoteip', remoteIp)
+  }
+
+  const response = await fetch(TURNSTILE_VERIFY_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  })
+
+  return (await response.json()) as TurnstileResult
+}
+
+export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+  try {
+    const { request, env } = context
+
+    let payload: Record<string, unknown>
+    try {
+      payload = (await request.json()) as Record<string, unknown>
+    } catch {
+      return json({ success: false, message: 'Invalid request payload.' }, 400)
+    }
+
+    const token =
+      typeof payload.turnstileToken === 'string' ? payload.turnstileToken.trim() : ''
+    if (!token) {
+      return json({ success: false, message: 'Captcha verification is required.' }, 400)
+    }
+
+    const secret = env.TURNSTILE_SECRET_KEY
+    if (!secret) {
+      return json({ success: false, message: 'Server captcha secret is not configured.' }, 500)
+    }
+
+    const turnstile = await verifyTurnstile(
+      secret,
+      token,
+      request.headers.get('CF-Connecting-IP'),
+    )
+    if (!turnstile.success) {
+      return json(
+        {
+          success: false,
+          message: 'Captcha verification failed.',
+          errors: turnstile['error-codes'] ?? [],
+        },
+        400,
+      )
+    }
+
+    const { turnstileToken: _token, ...orderData } = payload
+    const recipientEmail = (env.FORMSUBMIT_EMAIL ?? DEFAULT_FORMSUBMIT_EMAIL).trim()
+
+    const formSubmitResponse = await fetch(
+      `https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          ...orderData,
+          _captcha: 'false',
+          _template: 'table',
+        }),
+      },
+    )
+
+    const formSubmitText = await formSubmitResponse.text()
+    let formSubmitResult: { success?: boolean; message?: string } | null = null
+    try {
+      formSubmitResult = JSON.parse(formSubmitText) as {
+        success?: boolean
+        message?: string
+      }
+    } catch {
+      formSubmitResult = null
+    }
+
+    if (!formSubmitResponse.ok || (formSubmitResult && !formSubmitResult.success)) {
+      return json(
+        {
+          success: false,
+          message: 'Unable to send order email right now.',
+        },
+        502,
+      )
+    }
+
+    return json({ success: true, message: 'Order request sent.' })
+  } catch {
+    return json({ success: false, message: 'Unexpected server error.' }, 500)
+  }
+}

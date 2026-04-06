@@ -1,0 +1,2 @@
+TURNSTILE_SECRET_KEY=your_turnstile_secret_key
+FORMSUBMIT_EMAIL=your_formsubmit_recipient_email
