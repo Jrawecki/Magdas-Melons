@@ -8,7 +8,7 @@ interface TurnstileResult {
   'error-codes'?: string[]
 }
 
-const DEFAULT_FORMSUBMIT_EMAIL = 'magdalenaklotzbach@gmail.com'
+const DEFAULT_FORMSUBMIT_EMAIL = 'mklotzbach@yahoo.com'
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
 const json = (payload: unknown, status = 200): Response =>
