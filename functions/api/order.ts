@@ -23,6 +23,9 @@ const json = (payload: unknown, status = 200): Response =>
     },
   })
 
+const getRecipientEmail = (env: Env): string =>
+  (env.FORMSUBMIT_EMAIL ?? '').trim()
+
 const parseBooleanLike = (value: unknown): boolean | null => {
   if (typeof value === 'boolean') {
     return value
@@ -107,7 +110,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
     const orderData = { ...payload }
     delete orderData.turnstileToken
-    const recipientEmail = (env.FORMSUBMIT_EMAIL ?? '').trim()
+    const recipientEmail = getRecipientEmail(env)
     if (!recipientEmail) {
       return json({ success: false, message: 'Server recipient email is not configured.' }, 500)
     }

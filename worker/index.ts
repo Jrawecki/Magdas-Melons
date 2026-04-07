@@ -28,6 +28,9 @@ const json = (payload: unknown, status = 200): Response =>
     },
   })
 
+const getRecipientEmail = (env: Env): string =>
+  (env.FORMSUBMIT_EMAIL ?? '').trim()
+
 const parseBooleanLike = (value: unknown): boolean | null => {
   if (typeof value === 'boolean') {
     return value
@@ -117,7 +120,7 @@ const handleOrderRequest = async (request: Request, env: Env): Promise<Response>
 
   const orderData = { ...payload }
   delete orderData.turnstileToken
-  const recipientEmail = (env.FORMSUBMIT_EMAIL ?? '').trim()
+  const recipientEmail = getRecipientEmail(env)
   if (!recipientEmail) {
     return json({ success: false, message: 'Server recipient email is not configured.' }, 500)
   }
@@ -183,6 +186,14 @@ const handleOrderRequest = async (request: Request, env: Env): Promise<Response>
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+
+    if (url.pathname === '/api/debug/env') {
+      return json({
+        hasTurnstileSecret: typeof env.TURNSTILE_SECRET_KEY === 'string' && env.TURNSTILE_SECRET_KEY.trim().length > 0,
+        hasFormSubmitEmail: getRecipientEmail(env).length > 0,
+        host: url.host,
+      })
+    }
 
     if (url.pathname === '/api/order') {
       try {
