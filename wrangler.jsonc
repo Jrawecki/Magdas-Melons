@@ -16,5 +16,6 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "keep_vars": true
 }

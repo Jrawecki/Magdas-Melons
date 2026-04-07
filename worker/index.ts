@@ -2,6 +2,9 @@ interface Env {
   ASSETS: Fetcher
   TURNSTILE_SECRET_KEY?: string
   FORMSUBMIT_EMAIL?: string
+  FORM_SUBMIT_EMAIL?: string
+  EMAIL_TO?: string
+  [key: string]: unknown
 }
 
 interface Fetcher {
@@ -28,8 +31,33 @@ const json = (payload: unknown, status = 200): Response =>
     },
   })
 
-const getRecipientEmail = (env: Env): string =>
-  (env.FORMSUBMIT_EMAIL ?? '').trim()
+const getRecipientEmail = (env: Env): string => {
+  const directCandidates = [
+    env.FORMSUBMIT_EMAIL,
+    env.FORM_SUBMIT_EMAIL,
+    env.EMAIL_TO,
+  ]
+
+  for (const value of directCandidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+
+  for (const [key, value] of Object.entries(env)) {
+    if (
+      /form/i.test(key) &&
+      /submit/i.test(key) &&
+      /email/i.test(key) &&
+      typeof value === 'string' &&
+      value.trim()
+    ) {
+      return value.trim()
+    }
+  }
+
+  return ''
+}
 
 const parseBooleanLike = (value: unknown): boolean | null => {
   if (typeof value === 'boolean') {
@@ -186,14 +214,6 @@ const handleOrderRequest = async (request: Request, env: Env): Promise<Response>
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-
-    if (url.pathname === '/api/debug/env') {
-      return json({
-        hasTurnstileSecret: typeof env.TURNSTILE_SECRET_KEY === 'string' && env.TURNSTILE_SECRET_KEY.trim().length > 0,
-        hasFormSubmitEmail: getRecipientEmail(env).length > 0,
-        host: url.host,
-      })
-    }
 
     if (url.pathname === '/api/order') {
       try {

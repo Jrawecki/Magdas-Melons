@@ -1,6 +1,9 @@
 interface Env {
   TURNSTILE_SECRET_KEY?: string
   FORMSUBMIT_EMAIL?: string
+  FORM_SUBMIT_EMAIL?: string
+  EMAIL_TO?: string
+  [key: string]: unknown
 }
 
 interface TurnstileResult {
@@ -23,8 +26,33 @@ const json = (payload: unknown, status = 200): Response =>
     },
   })
 
-const getRecipientEmail = (env: Env): string =>
-  (env.FORMSUBMIT_EMAIL ?? '').trim()
+const getRecipientEmail = (env: Env): string => {
+  const directCandidates = [
+    env.FORMSUBMIT_EMAIL,
+    env.FORM_SUBMIT_EMAIL,
+    env.EMAIL_TO,
+  ]
+
+  for (const value of directCandidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+
+  for (const [key, value] of Object.entries(env)) {
+    if (
+      /form/i.test(key) &&
+      /submit/i.test(key) &&
+      /email/i.test(key) &&
+      typeof value === 'string' &&
+      value.trim()
+    ) {
+      return value.trim()
+    }
+  }
+
+  return ''
+}
 
 const parseBooleanLike = (value: unknown): boolean | null => {
   if (typeof value === 'boolean') {
