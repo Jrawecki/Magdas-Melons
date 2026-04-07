@@ -39,9 +39,9 @@ Delivery fee is intentionally not auto-calculated yet and is confirmed from addr
 
 ## Form Integration
 
-Order form submissions are sent to `/api/order` (Cloudflare Pages Function).
+Order form submissions are sent to `/api/order` (Cloudflare Worker route).
 
-That function:
+That route handler:
 
 - verifies Cloudflare Turnstile captcha server-side
 - forwards the order payload to FormSubmit
@@ -54,24 +54,22 @@ Vite frontend (`.env`):
 - `VITE_TURNSTILE_SITE_KEY`
 - `VITE_ORDER_API_PATH` (default `/api/order`)
 
-Cloudflare function vars (`.dev.vars` locally, Pages settings in production):
+Worker runtime vars (`.dev.vars` locally, Worker settings in production):
 
 - `TURNSTILE_SECRET_KEY`
 - `FORMSUBMIT_EMAIL`
 
 Note: Turnstile keys must be valid Cloudflare-issued keys (or official test keys). Random strings will fail.
 
-## Cloudflare Pages Deploy
+## Cloudflare Workers Deploy
 
-1. Push this repo to GitHub.
-2. In Cloudflare, go to `Workers & Pages` -> `Create` -> `Pages` -> `Connect to Git`.
-3. Build settings:
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. Add Pages environment variables:
-   - `TURNSTILE_SECRET_KEY` (your real Turnstile secret key)
-   - `FORMSUBMIT_EMAIL` (your receiving email address)
-5. Deploy and test an order submission.
+1. Set runtime secrets in Cloudflare Worker settings:
+   - `TURNSTILE_SECRET_KEY` (secret)
+   - `FORMSUBMIT_EMAIL`
+2. Build and deploy:
+   - `npm run deploy`
+3. Add your custom domain in Worker settings and verify TLS is active.
+4. Test `/api/order` from the live domain.
 
 Order emails are received at:
 
@@ -80,4 +78,4 @@ Order emails are received at:
 Integration is implemented in:
 
 - `src/components/features/InquiryForm.tsx`
-- `functions/api/order.ts`
+- `worker/index.ts`
