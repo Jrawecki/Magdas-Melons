@@ -94,15 +94,26 @@ const handleOrderRequest = async (request: Request, env: Env): Promise<Response>
 
   const { turnstileToken: _token, ...orderData } = payload
   const recipientEmail = (env.FORMSUBMIT_EMAIL ?? DEFAULT_FORMSUBMIT_EMAIL).trim()
+  const requestOrigin = request.headers.get('Origin')
+  const requestReferer = request.headers.get('Referer')
+  const formSubmitHeaders: Record<string, string> = {
+    'content-type': 'application/json',
+    accept: 'application/json',
+  }
+
+  if (requestOrigin) {
+    formSubmitHeaders.origin = requestOrigin
+  }
+
+  if (requestReferer) {
+    formSubmitHeaders.referer = requestReferer
+  }
 
   const formSubmitResponse = await fetch(
     `https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`,
     {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        accept: 'application/json',
-      },
+      headers: formSubmitHeaders,
       body: JSON.stringify({
         ...orderData,
         _captcha: 'false',
