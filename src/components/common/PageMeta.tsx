@@ -7,7 +7,7 @@ interface PageMetaProps {
 }
 
 function PageMeta({ title, description }: PageMetaProps) {
-  const fullTitle = 'Watermelon-Baskets'
+  const fullTitle = 'Watermelon Baskets'
   const socialTitle = `${title} | ${brandConfig.businessName}`
 
   return (

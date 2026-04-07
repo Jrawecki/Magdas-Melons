@@ -7,11 +7,11 @@ export const brandOptions = [
 ] as const
 
 export const brandConfig = {
-  businessName: '1 in a Melon Baskets',
+  businessName: 'One in a Melon Baskets',
   tagline:
     'Hand-carved watermelon baskets with fresh fruit for gifts, parties, and special occasions.',
   serviceArea: 'Local pickup and delivery in and around Newark, Delaware.',
-  contactEmail: 'jrawecki31@gmail.com',
+  contactEmail: 'mklotzbach@yahoo.com',
   contactPhone: '(302) 345-8857',
   instagramUrl: 'https://www.instagram.com/',
   facebookUrl: 'https://www.facebook.com/',
