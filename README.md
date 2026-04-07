@@ -59,6 +59,8 @@ Worker runtime vars (`.dev.vars` locally, Worker settings in production):
 - `TURNSTILE_SECRET_KEY`
 - `FORMSUBMIT_EMAIL`
 
+`FORMSUBMIT_EMAIL` is required. There is no hardcoded fallback recipient in the Worker.
+
 Note: Turnstile keys must be valid Cloudflare-issued keys (or official test keys). Random strings will fail.
 
 ## Cloudflare Workers Deploy
@@ -73,7 +75,7 @@ Note: Turnstile keys must be valid Cloudflare-issued keys (or official test keys
 
 Order emails are received at:
 
-- `FORMSUBMIT_EMAIL` (or fallback `contactEmail` behavior in code)
+- `FORMSUBMIT_EMAIL`
 
 Integration is implemented in:
 

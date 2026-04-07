@@ -13,7 +13,11 @@ interface TurnstileResult {
   'error-codes'?: string[]
 }
 
-const DEFAULT_FORMSUBMIT_EMAIL = 'mklotzbach@yahoo.com'
+interface FormSubmitResult {
+  success?: boolean | string
+  message?: string
+}
+
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
 const json = (payload: unknown, status = 200): Response =>
@@ -23,6 +27,25 @@ const json = (payload: unknown, status = 200): Response =>
       'content-type': 'application/json; charset=utf-8',
     },
   })
+
+const parseBooleanLike = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true') {
+      return true
+    }
+
+    if (normalized === 'false') {
+      return false
+    }
+  }
+
+  return null
+}
 
 const verifyTurnstile = async (
   secret: string,
@@ -92,8 +115,12 @@ const handleOrderRequest = async (request: Request, env: Env): Promise<Response>
     )
   }
 
-  const { turnstileToken: _token, ...orderData } = payload
-  const recipientEmail = (env.FORMSUBMIT_EMAIL ?? DEFAULT_FORMSUBMIT_EMAIL).trim()
+  const orderData = { ...payload }
+  delete orderData.turnstileToken
+  const recipientEmail = (env.FORMSUBMIT_EMAIL ?? '').trim()
+  if (!recipientEmail) {
+    return json({ success: false, message: 'Server recipient email is not configured.' }, 500)
+  }
   const requestOrigin = request.headers.get('Origin')
   const requestReferer = request.headers.get('Referer')
   const formSubmitHeaders: Record<string, string> = {
@@ -123,21 +150,28 @@ const handleOrderRequest = async (request: Request, env: Env): Promise<Response>
   )
 
   const formSubmitText = await formSubmitResponse.text()
-  let formSubmitResult: { success?: boolean; message?: string } | null = null
+  let formSubmitResult: FormSubmitResult | null = null
   try {
-    formSubmitResult = JSON.parse(formSubmitText) as {
-      success?: boolean
-      message?: string
-    }
+    formSubmitResult = JSON.parse(formSubmitText) as FormSubmitResult
   } catch {
     formSubmitResult = null
   }
 
-  if (!formSubmitResponse.ok || (formSubmitResult && !formSubmitResult.success)) {
+  const formSubmitSuccess = parseBooleanLike(formSubmitResult?.success)
+  const formSubmitMessage =
+    typeof formSubmitResult?.message === 'string' ? formSubmitResult.message.trim() : ''
+  const submissionFailed =
+    !formSubmitResponse.ok || formSubmitSuccess !== true || !formSubmitResult
+
+  if (submissionFailed) {
+    if (formSubmitMessage) {
+      console.error('FormSubmit rejected order email:', formSubmitMessage)
+    }
+
     return json(
       {
         success: false,
-        message: 'Unable to send order email right now.',
+        message: formSubmitMessage || 'Unable to send order email right now.',
       },
       502,
     )
